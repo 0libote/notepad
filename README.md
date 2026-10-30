@@ -32,7 +32,7 @@ docker compose up -d
 
 Open http://127.0.0.1:3000. The named `notepad-data` volume holds SQLite. Stop with `docker compose down`; do not add `-v` unless you intend to delete your server data. For a consistent live backup use SQLite's backup API/tooling, or stop the container before copying the volume; copying only the main DB while WAL is active can miss writes.
 
-The server requires an owner password and signs users in with revocable sessions. The published port is bound to localhost. For a remote URL, configure the exact HTTPS origin and a TLS reverse proxy; see [hosting and password setup](docs/HOSTING.md). LAN Docker/HTTPS deployment has been tested on HomeServer, including authentication, offline recovery and restart persistence. Public-DNS deployment is not yet verified. Connected clients share automatic sync logic; native execution still needs verification.
+The server requires an owner password and signs users in with revocable sessions. The published port is bound to localhost. For a remote URL, configure the exact HTTPS origin and a TLS reverse proxy; see [hosting and password setup](docs/HOSTING.md). LAN Docker/HTTPS deployment has been tested on HomeServer, including authentication, offline recovery and restart persistence. Public HTTPS through Cloudflare Tunnel is also verified; direct public Caddy/ACME deployment remains untested. Connected clients share automatic sync logic; native execution still needs verification.
 
 For LAN HTTPS deployment, see [Docker deployment](docs/DEPLOYMENT.md).
 

@@ -50,7 +50,7 @@ sudo docker compose -p notepad -f compose.lan.yaml build
 sudo docker compose -p notepad -f /var/lib/casaos/apps/notepad/docker-compose.yml up -d --no-build --pull never --force-recreate
 ```
 
-The image is local (`notepad-notepad:latest`), so rebuilding supplies updates rather than an app-store image pull. The dashboard tile opens the existing HTTPS address; certificate trust and app owner setup still apply.
+The image is local (`notepad-notepad:latest`), so rebuilding supplies updates rather than an app-store image pull. The dashboard tile opens the configured canonical HTTPS address. The LAN profile requires local certificate trust; the Cloudflare profile uses publicly trusted HTTPS. App owner setup applies to both.
 
 ## Cloudflare Tunnel
 
