@@ -1,5 +1,7 @@
 services:
   notepad:
+    image: notepad-notepad:latest
+    pull_policy: never
     build: .
     environment:
       NOTEPAD_PUBLIC_URL: https://${NOTEPAD_HOST:?Set NOTEPAD_HOST}:8443
@@ -23,3 +25,16 @@ volumes:
   notepad-data:
   caddy-data:
   caddy-config:
+x-casaos:
+  architectures:
+    - amd64
+  main: caddy
+  hostname: ${NOTEPAD_HOST}
+  scheme: https
+  port_map: "8443"
+  index: /
+  icon: https://raw.githubusercontent.com/0libote/notepad/main/assets/icon.svg
+  title:
+    en_US: Notepad
+  tagline:
+    en_US: Notes and whiteboards in one workspace

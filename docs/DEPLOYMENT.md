@@ -37,3 +37,17 @@ The LAN profile has been tested on HomeServer with the source-built Docker image
 `bun run smoke:deployment` targets a **disposable** HTTPS instance configured with the test-only fixture password from `scripts/test-server.mjs`. Set `NOTEPAD_TEST_URL` to that instance. It deliberately changes notebook content and must not target a personal notebook. Its temporary Chromium context accepts the local test certificate; production TLS is verified independently with `curl --cacert`. Install the public CA certificate on real client devices rather than disabling certificate verification.
 
 HomeServer operation files live under `/DATA/AppData/notepad`, with the Git checkout in `repository`. The deployment has no default owner password: if setup was not completed privately, run the setup command from an interactive SSH terminal. Docker permissions on that host require `sudo`.
+
+## ZimaOS dashboard
+
+A Docker-only Compose launch does not automatically create a managed ZimaOS dashboard tile. The LAN profile includes `x-casaos` metadata for the Notepad title, icon and HTTPS launch URL. On HomeServer, the managed manifest is `/var/lib/casaos/apps/notepad/docker-compose.yml`; it references the original notebook and certificate volumes as external volumes. ZimaOS's app API lists `notepad` as managed and running, and its restart control has been verified.
+
+For this source-built installation, rebuild from the Git checkout, then recreate through the managed manifest so the dashboard registration remains attached:
+
+```sh
+cd /DATA/AppData/notepad/repository
+sudo docker compose -p notepad -f compose.lan.yaml build
+sudo docker compose -p notepad -f /var/lib/casaos/apps/notepad/docker-compose.yml up -d --no-build --pull never --force-recreate
+```
+
+The image is local (`notepad-notepad:latest`), so rebuilding supplies updates rather than an app-store image pull. The dashboard tile opens the existing HTTPS address; certificate trust and app owner setup still apply.
