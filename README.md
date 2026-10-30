@@ -34,6 +34,8 @@ Open http://127.0.0.1:3000. The named `notepad-data` volume holds SQLite. Stop w
 
 The server requires an owner password and signs users in with revocable sessions. The published port is bound to localhost. For a remote URL, configure the exact HTTPS origin and a TLS reverse proxy; see [hosting and password setup](docs/HOSTING.md). The Docker/HTTPS deployment remains unverified here. Connected clients share automatic sync logic; native execution still needs verification.
 
+For LAN HTTPS deployment, see [Docker deployment](docs/DEPLOYMENT.md).
+
 ## Using it
 
 - **Write / Read / Canvas** share one note. Write edits Markdown source, Read renders it, and Canvas arranges captures and linked pages.
