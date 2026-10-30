@@ -10,7 +10,7 @@ docker compose -p notepad -f compose.lan.yaml exec notepad notepad-server setup
 
 The setup command prompts privately for an owner password of at least 12 characters. There is no default password. Before setup, the sign-in state reports unconfigured and private notebook requests return HTTP 503. Do not use the SSH account password as an app default.
 
-Caddy issues a local HTTPS certificate. Copy its **public root certificate** and install it as a trusted certificate on each client device:
+Caddy issues a local HTTPS certificate. The LAN configuration sets a [default SNI](https://caddyserver.com/docs/caddyfile/options#default-sni) so clients connecting directly to an IP address can select that certificate. Copy its **public root certificate** and install it as a trusted certificate on each client device:
 
 ```sh
 docker compose -p notepad -f compose.lan.yaml cp caddy:/data/caddy/pki/authorities/local/root.crt ./notepad-lan-root.crt

@@ -1,3 +1,7 @@
+{
+    default_sni {$NOTEPAD_HOST}
+}
+
 https://{$NOTEPAD_HOST} {
     tls internal
     reverse_proxy notepad:3000

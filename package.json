@@ -14,7 +14,8 @@
     "smoke:auth": "node scripts/auth-smoke.mjs",
     "smoke:notebook": "node scripts/notebook-smoke.mjs",
     "smoke:sync": "node scripts/sync-smoke.mjs",
-    "smoke:canvas": "node scripts/canvas-smoke.mjs"
+    "smoke:canvas": "node scripts/canvas-smoke.mjs",
+    "smoke:deployment": "node scripts/deployment-smoke.mjs"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.12.4",
