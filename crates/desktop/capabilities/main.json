@@ -13,6 +13,7 @@
     "allow-connection",
     "allow-auth-state",
     "allow-login",
+    "allow-setup-owner",
     "allow-logout"
   ]
 }

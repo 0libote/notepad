@@ -5,10 +5,9 @@ For a LAN server, use `compose.lan.yaml`. It runs the Rust service behind Caddy 
 ```sh
 printf 'NOTEPAD_HOST=YOUR_LAN_ADDRESS\n' > .env
 docker compose -p notepad -f compose.lan.yaml up -d --build
-docker compose -p notepad -f compose.lan.yaml exec notepad notepad-server setup
 ```
 
-The setup command prompts privately for an owner password of at least 12 characters. There is no default password. Before setup, the sign-in state reports unconfigured and private notebook requests return HTTP 503. Do not use the SSH account password as an app default.
+Open the app and choose a password on first load. There are no minimum-length or complexity rules, and setup signs you in immediately. There is no default password. Before setup, the sign-in state reports unconfigured and private notebook requests return HTTP 503. Do not use the SSH account password as an app default.
 
 Caddy issues a local HTTPS certificate. The LAN configuration sets a [default SNI](https://caddyserver.com/docs/caddyfile/options#default-sni) so clients connecting directly to an IP address can select that certificate. Copy its **public root certificate** and install it as a trusted certificate on each client device:
 
@@ -36,7 +35,7 @@ The LAN profile has been tested on HomeServer with the source-built Docker image
 
 `bun run smoke:deployment` targets a **disposable** HTTPS instance configured with the test-only fixture password from `scripts/test-server.mjs`. Set `NOTEPAD_TEST_URL` to that instance. It deliberately changes notebook content and must not target a personal notebook. Its temporary Chromium context accepts the local test certificate; production TLS is verified independently with `curl --cacert`. Install the public CA certificate on real client devices rather than disabling certificate verification.
 
-HomeServer operation files live under `/DATA/AppData/notepad`, with the Git checkout in `repository`. The deployment has no default owner password: if setup was not completed privately, run the setup command from an interactive SSH terminal. Docker permissions on that host require `sudo`.
+HomeServer operation files live under `/DATA/AppData/notepad`, with the Git checkout in `repository`. The deployment has no default owner password: choose the owner password in the first-run browser form. Host-side setup remains available for password resets. Docker permissions on that host require `sudo`.
 
 ## ZimaOS dashboard
 

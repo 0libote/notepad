@@ -42,6 +42,13 @@ async fn login(state: tauri::State<'_, DesktopClient>, password: String) -> Resu
     state.login(password).await
 }
 #[tauri::command]
+async fn setup_owner(
+    state: tauri::State<'_, DesktopClient>,
+    password: String,
+) -> Result<(), String> {
+    state.setup_owner(password).await
+}
+#[tauri::command]
 async fn logout(state: tauri::State<'_, DesktopClient>) -> Result<(), String> {
     state.logout().await
 }
@@ -65,6 +72,7 @@ fn main() {
             connection,
             auth_state,
             login,
+            setup_owner,
             logout
         ])
         .run(tauri::generate_context!())

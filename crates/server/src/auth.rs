@@ -81,14 +81,14 @@ impl Config {
 pub fn schema(db: &Connection) -> rusqlite::Result<()> {
     db.execute_batch("CREATE TABLE IF NOT EXISTS account (id INTEGER PRIMARY KEY CHECK(id=1), password_hash TEXT NOT NULL); CREATE TABLE IF NOT EXISTS sessions (digest BLOB PRIMARY KEY, expires INTEGER NOT NULL);")
 }
-pub fn set_password(db: &mut Connection, password: &str) -> Result<(), String> {
-    if password.chars().count() < 12 || password.len() > 1024 {
-        return Err("Choose at least 12 characters, within 1024 bytes.".into());
-    }
-    let hash = Argon2::default()
+fn hash_password(password: &str) -> Result<String, String> {
+    Argon2::default()
         .hash_password(password.as_bytes(), &SaltString::generate(&mut OsRng))
-        .map_err(|e| e.to_string())?
-        .to_string();
+        .map(|hash| hash.to_string())
+        .map_err(|e| e.to_string())
+}
+pub fn set_password(db: &mut Connection, password: &str) -> Result<(), String> {
+    let hash = hash_password(password)?;
     let tx = db.transaction().map_err(|e| e.to_string())?;
     tx.execute("INSERT INTO account VALUES(1,?1) ON CONFLICT(id) DO UPDATE SET password_hash=excluded.password_hash",[hash]).map_err(|e|e.to_string())?;
     tx.execute("DELETE FROM sessions", [])
@@ -164,30 +164,9 @@ pub struct LoginResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     token: Option<String>,
 }
-pub async fn login(
-    State(state): State<AppState>,
-    headers: HeaderMap,
-    Json(login): Json<Login>,
-) -> Result<Response, ApiError> {
-    if !state.auth.mutation_allowed(&headers) {
-        return Err((
-            StatusCode::FORBIDDEN,
-            "Sign in from the configured app URL.".into(),
-        ));
-    }
-    if login.password.len() > 1024 {
-        return Err((StatusCode::UNAUTHORIZED, "Password not accepted.".into()));
-    }
-    let hash = {
-        let db = state.db.lock().map_err(internal)?;
-        password_hash(&db).map_err(internal)?
-    }
-    .ok_or((
-        StatusCode::SERVICE_UNAVAILABLE,
-        "Owner password not configured. Run notepad-server setup on the host.".into(),
-    ))?;
+fn auth_permit(config: &Config) -> Result<tokio::sync::OwnedSemaphorePermit, ApiError> {
     {
-        let mut attempts = state.auth.attempts.lock().map_err(internal)?;
+        let mut attempts = config.attempts.lock().map_err(internal)?;
         let time = Instant::now();
         while attempts
             .front()
@@ -203,8 +182,7 @@ pub async fn login(
         }
         attempts.push_back(time);
     }
-    let permit = state
-        .auth
+    let permit = config
         .verification
         .clone()
         .try_acquire_owned()
@@ -214,6 +192,79 @@ pub async fn login(
                 "Sign-in busy. Try again shortly.".into(),
             )
         })?;
+    Ok(permit)
+}
+pub async fn setup(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(input): Json<Login>,
+) -> Result<Response, ApiError> {
+    if !state.auth.mutation_allowed(&headers) {
+        return Err((
+            StatusCode::FORBIDDEN,
+            "Open setup from the configured app URL.".into(),
+        ));
+    }
+    if password_hash(&*state.db.lock().map_err(internal)?)
+        .map_err(internal)?
+        .is_some()
+    {
+        return Err((
+            StatusCode::CONFLICT,
+            "This notebook is already set up. Sign in instead.".into(),
+        ));
+    }
+    let permit = auth_permit(&state.auth)?;
+    let hash = tokio::task::spawn_blocking(move || {
+        let _permit = permit;
+        hash_password(&input.password)
+    })
+    .await
+    .map_err(internal)?
+    .map_err(internal)?;
+    let mut bytes = [0u8; 32];
+    OsRng.fill_bytes(&mut bytes);
+    let token = URL_SAFE_NO_PAD.encode(bytes);
+    {
+        let mut db = state.db.lock().map_err(internal)?;
+        let tx = db.transaction().map_err(internal)?;
+        if password_hash(&tx).map_err(internal)?.is_some() {
+            return Err((
+                StatusCode::CONFLICT,
+                "This notebook is already set up. Sign in instead.".into(),
+            ));
+        }
+        tx.execute("INSERT INTO account VALUES(1,?1)", [hash])
+            .map_err(internal)?;
+        tx.execute(
+            "INSERT INTO sessions VALUES(?1,?2)",
+            rusqlite::params![digest(&token).unwrap(), now() + SESSION_SECONDS],
+        )
+        .map_err(internal)?;
+        tx.commit().map_err(internal)?;
+    }
+    session_response(&state.auth, &headers, token)
+}
+pub async fn login(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Json(login): Json<Login>,
+) -> Result<Response, ApiError> {
+    if !state.auth.mutation_allowed(&headers) {
+        return Err((
+            StatusCode::FORBIDDEN,
+            "Sign in from the configured app URL.".into(),
+        ));
+    }
+    let hash = {
+        let db = state.db.lock().map_err(internal)?;
+        password_hash(&db).map_err(internal)?
+    }
+    .ok_or((
+        StatusCode::SERVICE_UNAVAILABLE,
+        "Choose your notebook password on the first-run setup screen.".into(),
+    ))?;
+    let permit = auth_permit(&state.auth)?;
     let check_hash = hash.clone();
     let valid = tokio::task::spawn_blocking(move || {
         let _permit = permit;
@@ -250,6 +301,13 @@ pub async fn login(
         .map_err(internal)?;
         tx.commit().map_err(internal)?;
     }
+    session_response(&state.auth, &headers, token)
+}
+fn session_response(
+    config: &Config,
+    headers: &HeaderMap,
+    token: String,
+) -> Result<Response, ApiError> {
     let desktop = headers
         .get("x-notepad-client")
         .is_some_and(|v| v == "desktop")
@@ -263,10 +321,9 @@ pub async fn login(
     })
     .into_response();
     if !desktop {
-        response.headers_mut().insert(
-            header::SET_COOKIE,
-            state.auth.cookie(&token, SESSION_SECONDS),
-        );
+        response
+            .headers_mut()
+            .insert(header::SET_COOKIE, config.cookie(&token, SESSION_SECONDS));
     }
     Ok(response)
 }
@@ -304,7 +361,7 @@ pub async fn require_session(
         if password_hash(&db).map_err(internal)?.is_none() {
             return Err((
                 StatusCode::SERVICE_UNAVAILABLE,
-                "Owner password not configured. Run notepad-server setup on the host.".into(),
+                "Choose your notebook password on the first-run setup screen.".into(),
             ));
         }
         if !authenticated(&db, request.headers(), &state.auth).map_err(internal)? {
@@ -390,6 +447,116 @@ mod tests {
             .next()
             .unwrap()
             .into()
+    }
+    #[tokio::test]
+    async fn browser_setup_accepts_weak_and_empty_passwords_and_cannot_replace_an_owner() {
+        for password in ["", "x", " ", "🔓"] {
+            let (app, state) = fixture("http://127.0.0.1:3000", false);
+            let body = serde_json::json!({"password":password}).to_string();
+            assert_eq!(
+                send(
+                    &app,
+                    "POST",
+                    "/api/auth/setup",
+                    &body,
+                    None,
+                    Some("https://attacker.invalid")
+                )
+                .await
+                .status(),
+                StatusCode::FORBIDDEN
+            );
+            assert!(password_hash(&state.db.lock().unwrap()).unwrap().is_none());
+            let response = send(&app, "POST", "/api/auth/setup", &body, None, None).await;
+            assert_eq!(response.status(), StatusCode::OK);
+            let cookie = response.headers()["set-cookie"]
+                .to_str()
+                .unwrap()
+                .split(';')
+                .next()
+                .unwrap()
+                .to_string();
+            assert_eq!(
+                send(&app, "GET", "/api/workspace", "", Some(&cookie), None)
+                    .await
+                    .status(),
+                StatusCode::OK
+            );
+            assert_eq!(
+                send(
+                    &app,
+                    "POST",
+                    "/api/auth/setup",
+                    r#"{"password":"replacement"}"#,
+                    None,
+                    None
+                )
+                .await
+                .status(),
+                StatusCode::CONFLICT
+            );
+            assert_eq!(
+                send(&app, "POST", "/api/auth/login", &body, None, None)
+                    .await
+                    .status(),
+                StatusCode::OK
+            );
+            assert_eq!(
+                send(
+                    &app,
+                    "POST",
+                    "/api/auth/login",
+                    r#"{"password":"replacement"}"#,
+                    None,
+                    None
+                )
+                .await
+                .status(),
+                StatusCode::UNAUTHORIZED
+            );
+        }
+    }
+    #[tokio::test]
+    async fn simultaneous_setup_has_only_one_winner() {
+        let (app, state) = fixture("http://127.0.0.1:3000", false);
+        let (a, b) = tokio::join!(
+            send(
+                &app,
+                "POST",
+                "/api/auth/setup",
+                r#"{"password":"a"}"#,
+                None,
+                None
+            ),
+            send(
+                &app,
+                "POST",
+                "/api/auth/setup",
+                r#"{"password":"b"}"#,
+                None,
+                None
+            )
+        );
+        let statuses = [a.status(), b.status()];
+        assert_eq!(statuses.iter().filter(|&&s| s == StatusCode::OK).count(), 1);
+        assert_eq!(
+            statuses
+                .iter()
+                .filter(|&&s| s == StatusCode::CONFLICT)
+                .count(),
+            1
+        );
+        let db = state.db.lock().unwrap();
+        assert_eq!(
+            db.query_row("SELECT COUNT(*) FROM account", [], |r| r.get::<_, u64>(0))
+                .unwrap(),
+            1
+        );
+        assert_eq!(
+            db.query_row("SELECT COUNT(*) FROM sessions", [], |r| r.get::<_, u64>(0))
+                .unwrap(),
+            1
+        );
     }
     #[tokio::test]
     async fn cookie_sessions_are_required_expire_and_revoke() {
@@ -501,7 +668,7 @@ mod tests {
                 .status(),
             StatusCode::UNAUTHORIZED
         );
-        assert!(set_password(&mut state.db.lock().unwrap(), "short").is_err());
+        assert!(set_password(&mut state.db.lock().unwrap(), "short").is_ok());
     }
     #[tokio::test]
     async fn secure_cookies_origin_guards_and_login_limit() {

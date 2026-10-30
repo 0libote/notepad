@@ -9,6 +9,7 @@ fn main() {
             "connection",
             "auth_state",
             "login",
+            "setup_owner",
             "logout",
         ]),
     ))

@@ -7,23 +7,21 @@ Notepad currently supports one owner and one workspace per server. The server re
 Locally:
 
 ```sh
-cargo run -p notepad-server -- setup
 cargo run -p notepad-server
 ```
 
-The setup command prompts twice without echoing the password. Choose at least 12 characters. It writes an Argon2id hash to SQLite, never a plaintext password. Then open http://127.0.0.1:3000 and sign in. Keep the same `NOTEPAD_DATA` directory for both commands. Existing notes survive setup.
+Open http://127.0.0.1:3000 and choose a password on the first-run form. There are no minimum-length or complexity rules. Setup stores an Argon2id hash, signs you in, and becomes unavailable once an owner exists. Existing notes are preserved.
 
 With Docker:
 
 ```sh
 docker compose build
-docker compose run --rm -it notepad notepad-server setup
 docker compose up -d
 ```
 
 The setup container and service share the named data volume. The normal published port remains bound to localhost. No default password is provided.
 
-For an automation-managed secret, the setup command also accepts `setup --password-file PATH`. Mount the secret read-only and ensure the container user can read it. Do not put the password in a command-line argument or commit a secret file. The file's final line break is ignored; spaces are preserved.
+The host command `notepad-server setup` remains available for password resets and optional preconfiguration; it prompts twice without echoing the password and has no strength requirements. For an automation-managed secret, the setup command also accepts `setup --password-file PATH`. Mount the secret read-only and ensure the container user can read it. Do not put the password in a command-line argument or commit a secret file. The file's final line break is ignored; spaces are preserved.
 
 ## Public HTTPS URL
 

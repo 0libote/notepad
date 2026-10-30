@@ -731,10 +731,16 @@ fn App() -> impl IntoView {
         }
         busy.set(true);
         auth_error.set(String::new());
+        let setup = auth.get_untracked().is_some_and(|a| !a.configured);
         let entered = password.get_untracked();
         password.set(String::new());
         spawn_local(async move {
-            match persistence::login(entered).await {
+            let result = if setup {
+                persistence::setup(entered).await
+            } else {
+                persistence::login(entered).await
+            };
+            match result {
                 Ok(()) => {
                     auth.set(Some(notepad_core::AuthState {
                         configured: true,
@@ -759,7 +765,12 @@ fn App() -> impl IntoView {
                         );
                     }
                 }
-                Err(error) => auth_error.set(error),
+                Err(error) => {
+                    auth_error.set(error);
+                    if let Ok(state) = persistence::auth_state().await {
+                        auth.set(Some(state));
+                    }
+                }
             }
             busy.set(false);
             sync.request(false);
@@ -926,12 +937,8 @@ fn App() -> impl IntoView {
                 <header class="topbar"><button class="mobile-menu" aria-label="Toggle notes" on:click=move |_| menu.update(|v| *v = !*v)><Icon name="menu"/></button><div class="breadcrumb">"My workspace"<span>"/"</span><strong>{move || if e.ready.get(){e.workspace.get().notes[e.active.get()].title.clone()}else{"Notebook".into()}}</strong></div><Show when=move || remote_enabled.get()&&tab_blocked.get().is_empty()><button class="session-control" disabled=move || busy.get() on:click=move |_| auth_open.update(|v|*v = !*v) class:hidden-control=move || auth.get().is_some() || auth_open.get()>"Sign in"</button><button class="session-control" class:hidden-control=move || !auth.get().is_some_and(|a|a.authenticated) disabled=move || busy.get() on:click=sign_out>"Sign out"</button></Show><button class="export" disabled=move || !e.ready.get() title="Export workspace as JSON" on:click=move |_| { if let Err(err)=download(e.workspace.get_untracked()) {e.status.set(err);} }><Icon name="download"/><span>"Export"</span></button><button class="primary" disabled=move || busy.get() || sync.running.get() || !e.ready.get() on:click=save><Icon name="save"/>{move || if busy.get() || sync.running.get() {"Syncing…"} else if remote_enabled.get() {"Save to server"} else {"Save locally"}}</button></header>
                 <Show when=move || remote_enabled.get() && tab_blocked.get().is_empty() && (auth_open.get() || auth.get().is_some_and(|a|!a.authenticated))>
                     <section class="auth-panel" aria-label="Server sign-in">
-                        <Show when=move || auth.get().is_some_and(|a|!a.configured) fallback=move ||view!{
-                            <div><h2>"Sign in to your notebook"</h2><p>"Local drafts stay on this device while you reconnect."</p></div>
-                            <form on:submit=sign_in><label for="owner-password">"Owner password"</label><div class="auth-fields"><input id="owner-password" type="password" autocomplete="current-password" required maxlength="1024" prop:value=move || password.get() on:input=move |ev|password.set(event_target_value(&ev)) disabled=move ||busy.get()/><button class="primary" type="submit" disabled=move ||busy.get()>{move ||if busy.get(){"Signing in…"}else{"Sign in"}}</button></div><p class="auth-error" role="status" aria-live="polite">{move ||auth_error.get()}</p></form>
-                        }>
-                            <div><h2>"Finish setting up your notebook"</h2><p>"The owner password needs to be configured on the server."</p><p>"On the host, run "<code>"notepad-server setup"</code>". Then reload this page."</p></div>
-                        </Show>
+                        <div><h2>{move ||if auth.get().is_some_and(|a|!a.configured){"Create your notebook"}else{"Sign in to your notebook"}}</h2><p>{move ||if auth.get().is_some_and(|a|!a.configured){"Choose a password. No minimum length or complexity rules."}else{"Local drafts stay on this device while you reconnect."}}</p></div>
+                        <form on:submit=sign_in><label for="owner-password">"Password"</label><div class="auth-fields"><input id="owner-password" type="password" autocomplete=move ||if auth.get().is_some_and(|a|!a.configured){"new-password"}else{"current-password"} prop:value=move ||password.get() on:input=move |ev|password.set(event_target_value(&ev)) disabled=move ||busy.get()/><button class="primary" type="submit" disabled=move ||busy.get()>{move ||if busy.get(){"Opening…"}else if auth.get().is_some_and(|a|!a.configured){"Create notebook"}else{"Sign in"}}</button></div><p class="auth-error" role="status" aria-live="polite">{move ||auth_error.get()}</p></form>
                     </section>
                 </Show>
                 <Show when=move || e.ready.get() fallback=move ||view!{<div class="locked-workspace"><p>{move ||if !tab_blocked.get().is_empty(){tab_blocked.get()}else if auth.get().is_some_and(|a|!a.authenticated){"Sign in to open your notebook.".into()}else if auth.get().is_some(){"Load your server copy or import a backup to open your notebook.".into()}else{"Opening your notebook…".into()}}</p></div>}>

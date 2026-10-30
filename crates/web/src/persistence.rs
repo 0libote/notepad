@@ -220,18 +220,32 @@ pub async fn auth_state() -> Result<notepad_core::AuthState, String> {
         .map_err(|_| "Invalid sign-in response.".into())
 }
 pub async fn login(password: String) -> Result<(), String> {
+    authenticate(password, false).await
+}
+pub async fn setup(password: String) -> Result<(), String> {
+    authenticate(password, true).await
+}
+async fn authenticate(password: String, setup: bool) -> Result<(), String> {
     if is_desktop() {
-        return invoke("login", &serde_json::json!({"password":password})).await;
+        return invoke(
+            if setup { "setup_owner" } else { "login" },
+            &serde_json::json!({"password":password}),
+        )
+        .await;
     }
     let (signal, _timeout) = request_timeout()?;
-    let response = gloo_net::http::Request::post("/api/auth/login")
-        .abort_signal(Some(&signal))
-        .header("x-notepad-request", "1")
-        .json(&serde_json::json!({"password":password}))
-        .map_err(db_error)?
-        .send()
-        .await
-        .map_err(|_| "Server unavailable. Try signing in again.".to_string())?;
+    let response = gloo_net::http::Request::post(if setup {
+        "/api/auth/setup"
+    } else {
+        "/api/auth/login"
+    })
+    .abort_signal(Some(&signal))
+    .header("x-notepad-request", "1")
+    .json(&serde_json::json!({"password":password}))
+    .map_err(db_error)?
+    .send()
+    .await
+    .map_err(|_| "Server unavailable. Try signing in again.".to_string())?;
     if !response.ok() {
         return Err(response
             .text()

@@ -104,6 +104,10 @@ fn app(state: AppState, dist: &str) -> Router {
             "/api/auth/login",
             axum::routing::post(auth::login).layer(DefaultBodyLimit::max(4096)),
         )
+        .route(
+            "/api/auth/setup",
+            axum::routing::post(auth::setup).layer(DefaultBodyLimit::max(4096)),
+        )
         .route("/api/auth/logout", axum::routing::post(auth::logout))
         .layer(axum::middleware::from_fn(auth::no_cache));
     Router::new()
@@ -140,7 +144,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let input = std::fs::read_to_string(&args[2])?;
             input.trim_end_matches(['\r', '\n']).to_string()
         } else if args.len() == 1 {
-            let password = rpassword::prompt_password("New owner password (12+ characters): ")?;
+            let password = rpassword::prompt_password("New owner password: ")?;
             if password != rpassword::prompt_password("Repeat password: ")? {
                 return Err("Passwords did not match".into());
             }

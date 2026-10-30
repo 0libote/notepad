@@ -14,7 +14,6 @@ Install Rust and Bun, then:
 rustup target add wasm32-unknown-unknown
 cargo install --locked trunk --version 0.21.14
 bun run build
-cargo run -p notepad-server -- setup
 bun run server
 ```
 
@@ -26,13 +25,12 @@ For live reload, run `NOTEPAD_PUBLIC_URL=http://127.0.0.1:8080 bun run server` i
 
 ```sh
 docker compose build
-docker compose run --rm -it notepad notepad-server setup
 docker compose up -d
 ```
 
 Open http://127.0.0.1:3000. The named `notepad-data` volume holds SQLite. Stop with `docker compose down`; do not add `-v` unless you intend to delete your server data. For a consistent live backup use SQLite's backup API/tooling, or stop the container before copying the volume; copying only the main DB while WAL is active can miss writes.
 
-The server requires an owner password and signs users in with revocable sessions. The published port is bound to localhost. For a remote URL, configure the exact HTTPS origin and a TLS reverse proxy; see [hosting and password setup](docs/HOSTING.md). LAN Docker/HTTPS deployment has been tested on HomeServer, including authentication, offline recovery and restart persistence. Public HTTPS through Cloudflare Tunnel is also verified; direct public Caddy/ACME deployment remains untested. Connected clients share automatic sync logic; native execution still needs verification.
+On first load, choose your own password with no minimum length or complexity rules. Setup signs you in, then closes to prevent later password replacement. Subsequent visits use revocable sessions. The published port is bound to localhost. For a remote URL, configure the exact HTTPS origin and a TLS reverse proxy; see [hosting and password setup](docs/HOSTING.md). LAN Docker/HTTPS deployment has been tested on HomeServer, including authentication, offline recovery and restart persistence. Public HTTPS through Cloudflare Tunnel is also verified; direct public Caddy/ACME deployment remains untested. Connected clients share automatic sync logic; native execution still needs verification.
 
 For LAN HTTPS deployment, see [Docker deployment](docs/DEPLOYMENT.md).
 
@@ -73,6 +71,7 @@ bun run smoke:auth
 bun run smoke:notebook
 bun run smoke:sync
 bun run smoke:canvas
+bun run smoke:onboarding
 ```
 
 The smoke tests launch isolated temporary servers on ports 3137–3140 and delete their test databases. It exercises cards, dragging, undo, drawing, link/image/email drops, original email download, safe email rendering, writing, server save, reload recovery, bundled fonts, and the mobile shell.

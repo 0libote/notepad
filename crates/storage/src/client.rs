@@ -72,16 +72,27 @@ impl DesktopClient {
             .map_err(|_| "Invalid sign-in response.".into())
     }
     pub async fn login(&self, password: String) -> Result<(), String> {
+        self.authenticate(password, false).await
+    }
+    pub async fn setup_owner(&self, password: String) -> Result<(), String> {
+        self.authenticate(password, true).await
+    }
+    async fn authenticate(&self, password: String, setup: bool) -> Result<(), String> {
         let server = self
             .server
             .as_ref()
             .ok_or("Local-only notebooks do not need server sign-in")?;
-        if password.len() > 1024 {
-            return Err("Password not accepted.".into());
-        }
         let response = self
             .client
-            .post(server.join("api/auth/login").map_err(|e| e.to_string())?)
+            .post(
+                server
+                    .join(if setup {
+                        "api/auth/setup"
+                    } else {
+                        "api/auth/login"
+                    })
+                    .map_err(|e| e.to_string())?,
+            )
             .header("x-notepad-request", "1")
             .header("x-notepad-client", "desktop")
             .json(&serde_json::json!({"password":password}))
@@ -91,6 +102,7 @@ impl DesktopClient {
         if !response.status().is_success() {
             return Err(match response.status().as_u16() {
                 401 => "Password not accepted.",
+                409 => "This notebook is already set up. Sign in instead.",
                 429 => "Too many sign-in attempts. Try again in a minute.",
                 503 => "Owner password not configured on the server.",
                 _ => "Sign-in failed.",
