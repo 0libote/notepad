@@ -55,7 +55,7 @@ try{
  // Replacing a backup may reuse card IDs with a different target. Rebuild those views, and undo safely.
  const replacement=await disk();replacement.notes.find(n=>n.id===sourceId).cards.find(c=>c.kind==='note').text=dropped.id;
  const backupPath=join(data,'changed-target.json');await writeFile(backupPath,JSON.stringify(replacement));page.on('dialog',dialog=>dialog.accept());
- await (await page.$('[aria-label="Import backup"]')).uploadFile(backupPath);await page.waitForFunction(()=>document.querySelector('[aria-label="Note title"]')?.value==='A little room to think');await saved();await selectNote('Field notes');
+ await page.waitForFunction(()=>!document.querySelector('[aria-label="Import backup"]')?.disabled);await (await page.$('[aria-label="Import backup"]')).uploadFile(backupPath);await page.waitForFunction(()=>document.querySelector('[aria-label="Note title"]')?.value==='A little room to think');await saved();await selectNote('Field notes');
  await page.waitForFunction(()=>document.querySelector('.canvas-card.note h3')?.textContent==='Dropped page');
  await page.click('[aria-label="Undo"]');await page.waitForFunction(()=>document.querySelector('.canvas-card.note h3')?.textContent==='Field notes');await saved();
  await tab('Read');await page.screenshot({path:'/tmp/notepad-reading.png'});await page.setViewport({width:375,height:812});await page.screenshot({path:'/tmp/notepad-reading-mobile.png'});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth),375);
