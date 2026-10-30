@@ -1,0 +1,42 @@
+services:
+  notepad:
+    image: notepad-notepad:latest
+    pull_policy: never
+    build: .
+    environment:
+      NOTEPAD_PUBLIC_URL: https://${NOTEPAD_PUBLIC_HOST:?Set NOTEPAD_PUBLIC_HOST}
+    volumes:
+      - notepad-data:/data
+    restart: unless-stopped
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "${NOTEPAD_ORIGIN_BIND:-127.0.0.1}:${NOTEPAD_ORIGIN_PORT:-3087}:80"
+    volumes:
+      - ./deploy/Caddyfile.tunnel:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - notepad
+    restart: unless-stopped
+volumes:
+  notepad-data:
+    external: true
+    name: notepad_notepad-data
+  caddy-data:
+    external: true
+    name: notepad_caddy-data
+  caddy-config:
+    external: true
+    name: notepad_caddy-config
+x-casaos:
+  architectures:
+    - amd64
+  main: caddy
+  hostname: ${NOTEPAD_PUBLIC_HOST}
+  scheme: https
+  port_map: "443"
+  index: /
+  icon: https://raw.githubusercontent.com/0libote/notepad/main/assets/icon.svg
+  title:
+    en_US: Notepad

@@ -51,3 +51,11 @@ sudo docker compose -p notepad -f /var/lib/casaos/apps/notepad/docker-compose.ym
 ```
 
 The image is local (`notepad-notepad:latest`), so rebuilding supplies updates rather than an app-store image pull. The dashboard tile opens the existing HTTPS address; certificate trust and app owner setup still apply.
+
+## Cloudflare Tunnel
+
+For an existing installation behind a host-networked Cloudflare connector, `compose.cloudflared.yaml` reuses the notebook and certificate volumes. Set `NOTEPAD_PUBLIC_HOST` to the public hostname (without `https://`). The profile defaults to an HTTP origin bound only to localhost on port 3087; the tunnel's service should be `http://127.0.0.1:3087`. Cloudflare provides publicly trusted HTTPS at the external URL. Do not send HTTP to the LAN profile's HTTPS port.
+
+The public hostname must also match `NOTEPAD_PUBLIC_URL` so browser sign-in and save requests pass the origin guard. The dashboard metadata uses the public hostname and HTTPS port 443. Do not put a complete URL into the hostname field, since the dashboard adds the scheme itself.
+
+HomeServer's existing tunnel pointed to HTTP on its original origin port. Its managed manifest now serves HTTP on that port for the tunnel's local hop and sets the public origin to `https://notepad.0liman.uk`. The dashboard opens that public URL; the former LAN HTTPS URL is no longer its entry point. This deployment was verified in Chromium without disabling certificate checks: the app loads over trusted public TLS, Web Locks are available, and owner setup is still required before notebook access.
