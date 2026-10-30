@@ -29,3 +29,11 @@ docker compose -p notepad -f compose.lan.yaml restart notepad
 The notebook volume is `notepad_notepad-data`; certificate volumes are `notepad_caddy-data` and `notepad_caddy-config`. Stop the app before taking a filesystem-level SQLite backup, or use SQLite's backup API. Keep independent JSON exports. `down` keeps named volumes; `down -v` deletes them and must not be used for routine updates.
 
 For updates, back up, fetch the desired Git revision, stop the old service, rebuild and start the matched backend/web bundle. Reload browser clients afterward. Format-1 data upgrades transactionally; older clients cannot write over the newer canvas fields. Native desktop packaging is a separate deliverable.
+
+## Deployment verification
+
+The LAN profile has been tested on HomeServer with the source-built Docker image. Checks covered TLS validation with the copied CA certificate, an unconfigured production notebook rejecting private reads, and a separate disposable instance exercising secure cookies, Web Locks, canvas editing, server saves, reload, offline recovery, origin rejection, phone layout, and persistence after a container restart. The temporary instance uses separate project volumes and is removed afterward.
+
+`bun run smoke:deployment` targets a **disposable** HTTPS instance configured with the test-only fixture password from `scripts/test-server.mjs`. Set `NOTEPAD_TEST_URL` to that instance. It deliberately changes notebook content and must not target a personal notebook. Its temporary Chromium context accepts the local test certificate; production TLS is verified independently with `curl --cacert`. Install the public CA certificate on real client devices rather than disabling certificate verification.
+
+HomeServer operation files live under `/DATA/AppData/notepad`, with the Git checkout in `repository`. The deployment has no default owner password: if setup was not completed privately, run the setup command from an interactive SSH terminal. Docker permissions on that host require `sudo`.

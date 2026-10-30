@@ -2,7 +2,7 @@
 
 The Tauri client packages the Rust/WASM workspace and saves drafts through Rust IPC into SQLite in the operating system's application-data directory. The window uses the existing writing/canvas UI. No Node server or separate web server is needed for local-only use.
 
-**Status:** implementation and portable backend tests are present. A native installer and WebView launch have not yet been verified in the current environment. Linux GTK/WebKit development packages and the Windows MinGW cross compiler are missing. Browser IPC tests verify the UI contract but do not substitute for native testing. A Linux desktop check is included in CI.
+**Status:** implementation and portable backend tests are present. A native installer and WebView launch have not yet been verified in the current environment. Linux GTK/WebKit development packages and the Windows MinGW cross compiler are missing. Browser IPC tests verify the UI contract but do not substitute for native testing. The Linux desktop `cargo check` now passes in GitHub CI with GTK/WebKit installed; native linking, installers and WebView launch remain unverified.
 
 ## Build
 

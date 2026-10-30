@@ -42,7 +42,7 @@ Replace the example hostname with your own. Its DNS must point to your host and 
 
 With another reverse proxy, preserve `Origin` and proxy the entire origin, including `/api`. Set `NOTEPAD_PUBLIC_URL` explicitly. The app checks that state-changing browser requests come from that origin; it does not trust forwarded headers to decide whether a cookie is secure.
 
-The Docker/Caddy example has not been started in the current development environment because no container runtime is installed. Do not treat the supplied configuration as a verified public deployment. Native package installation is also outstanding.
+The LAN Docker/Caddy deployment has been exercised on HomeServer with a trusted local CA, secure-cookie authentication, browser editing, offline recovery and container restart persistence. See [LAN deployment](DEPLOYMENT.md). The public-DNS configuration remains unverified. Native package installation and WebView launch are also outstanding.
 
 ## Sessions and local copies
 

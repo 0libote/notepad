@@ -5,3 +5,8 @@ node_modules
 .tools
 data
 .hallmark
+
+.env
+.env.*
+*.crt
+*.key
