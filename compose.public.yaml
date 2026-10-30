@@ -1,0 +1,21 @@
+services:
+  notepad:
+    environment:
+      NOTEPAD_PUBLIC_URL: https://${NOTEPAD_DOMAIN:?Set NOTEPAD_DOMAIN to your notes hostname}
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - notepad
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      NOTEPAD_DOMAIN: ${NOTEPAD_DOMAIN:?Set NOTEPAD_DOMAIN to your notes hostname}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+volumes:
+  caddy-data:
+  caddy-config:

@@ -1,0 +1,4 @@
+{$NOTEPAD_DOMAIN} {
+    encode zstd gzip
+    reverse_proxy notepad:3000
+}

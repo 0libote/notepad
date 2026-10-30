@@ -1,0 +1,25 @@
+services:
+  notepad:
+    build: .
+    environment:
+      NOTEPAD_PUBLIC_URL: https://${NOTEPAD_HOST:?Set NOTEPAD_HOST}:8443
+    volumes:
+      - notepad-data:/data
+    restart: unless-stopped
+  caddy:
+    image: caddy:2-alpine
+    environment:
+      NOTEPAD_HOST: ${NOTEPAD_HOST:?Set NOTEPAD_HOST}
+    ports:
+      - "${NOTEPAD_HOST}:8443:443"
+    volumes:
+      - ./deploy/Caddyfile.lan:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - notepad
+    restart: unless-stopped
+volumes:
+  notepad-data:
+  caddy-data:
+  caddy-config:

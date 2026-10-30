@@ -1,0 +1,16 @@
+/target/
+/dist/
+/.tools/
+/node_modules/
+/data/
+*.db*
+.hallmark/screenshots/
+
+.hallmark/shots/
+
+crates/desktop/target/
+crates/desktop/gen/
+
+.env
+.env.*
+!.env.example

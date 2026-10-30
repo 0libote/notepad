@@ -1,0 +1,21 @@
+{
+  "scanned": "2026-10-30",
+  "findings": {
+    "source": "DESIGN.md:1 locks the existing notebook system",
+    "fonts": "crates/web/styles/tokens.css:67 and app.css:17: Instrument Sans and Figtree; bundled locally",
+    "palette": "crates/web/styles/app.css:6: chalk, ink, slate and muted blue tokens",
+    "motion": "No decorative motion; app responds to user gestures",
+    "framework": "crates/web/Cargo.toml: Leptos CSR/Rust WASM"
+  },
+  "preserve": [
+    "Notepad name",
+    "Existing page/canvas shell",
+    "Fonts and role-based colour tokens",
+    "Keyboard focus and reduced motion"
+  ],
+  "introduce": [
+    "Selected-card resize handle and dimensions",
+    "Anchored card connections",
+    "Selection controls for cards, drawings and connections"
+  ]
+}

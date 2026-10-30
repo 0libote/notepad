@@ -1,0 +1,19 @@
+[package]
+name = "notepad-web"
+version = "0.1.0"
+edition = "2024"
+[dependencies]
+notepad-core.workspace = true
+serde_json.workspace = true
+leptos = { version = "0.8", features = ["csr"] }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+gloo-net = "0.6"
+web-sys = { version = "0.3", features = ["Window", "ResizeObserver", "ResizeObserverEntry", "HtmlElement", "KeyboardEvent", "FocusOptions", "AbortController", "AbortSignal", "Storage", "StorageEvent", "RequestCache", "Document", "Element", "DomRect", "PointerEvent", "DragEvent", "DataTransfer", "FileList", "File", "Blob", "HtmlInputElement", "HtmlSelectElement", "HtmlTextAreaElement", "HtmlAnchorElement", "Url", "Location"] }
+indexed_db_futures = "0.6"
+gloo-timers = { version = "0.3", features = ["futures"] }
+serde-wasm-bindgen = "0.6"
+serde = { workspace = true }
+
+base64 = "0.22"

@@ -1,0 +1,17 @@
+[
+ {
+  "scope": "app",
+  "shape": "app screen",
+  "theme": "ribbon",
+  "axes": "light/grotesk-sans/cool",
+  "nav": "notebook rail",
+  "signature": "one note, a writing surface and a spatial canvas",
+  "imagery": "user attachments",
+  "entry": "crates/web/index.html",
+  "sections": [],
+  "waived": [],
+  "prompt": "Rust personal notes and whiteboard workspace, self hosted, future desktop",
+  "date": "2026-10-29",
+  "mode": "build"
+ }
+]

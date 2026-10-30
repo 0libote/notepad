@@ -1,0 +1,23 @@
+{
+  "name": "notepad-tooling",
+  "private": true,
+  "scripts": {
+    "dev": "NO_COLOR=true trunk serve",
+    "server": "cargo run -p notepad-server",
+    "build": "NO_COLOR=true trunk build --release",
+    "test": "cargo test --workspace --exclude notepad-web",
+    "check": "cargo check -p notepad-web --target wasm32-unknown-unknown",
+    "smoke": "node scripts/smoke.mjs",
+    "desktop:dev": "cd crates/desktop && tauri dev",
+    "desktop:build": "cd crates/desktop && tauri build",
+    "smoke:persistence": "node scripts/persistence-smoke.mjs",
+    "smoke:auth": "node scripts/auth-smoke.mjs",
+    "smoke:notebook": "node scripts/notebook-smoke.mjs",
+    "smoke:sync": "node scripts/sync-smoke.mjs",
+    "smoke:canvas": "node scripts/canvas-smoke.mjs"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.12.4",
+    "puppeteer-core": "^25.16.0"
+  }
+}

@@ -1,0 +1,12 @@
+services:
+  notepad:
+    build: .
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      NOTEPAD_PUBLIC_URL: ${NOTEPAD_PUBLIC_URL:-http://127.0.0.1:3000}
+    volumes:
+      - notepad-data:/data
+    restart: unless-stopped
+volumes:
+  notepad-data:

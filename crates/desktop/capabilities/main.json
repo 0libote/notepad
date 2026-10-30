@@ -1,0 +1,18 @@
+{
+  "identifier": "main-workspace",
+  "description": "The packaged workspace can read and save its drafts and contact the configured notes server.",
+  "windows": [
+    "main"
+  ],
+  "permissions": [
+    "allow-load-draft",
+    "allow-load-sync-base",
+    "allow-save-draft",
+    "allow-load-server",
+    "allow-save-server",
+    "allow-connection",
+    "allow-auth-state",
+    "allow-login",
+    "allow-logout"
+  ]
+}

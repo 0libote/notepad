@@ -1,0 +1,4 @@
+https://{$NOTEPAD_HOST} {
+    tls internal
+    reverse_proxy notepad:3000
+}

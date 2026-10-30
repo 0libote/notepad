@@ -1,0 +1,20 @@
+[package]
+name = "notepad-server"
+version = "0.1.0"
+edition = "2024"
+[dependencies]
+notepad-core.workspace = true
+serde_json.workspace = true
+axum = "0.8"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net", "signal"] }
+tower-http = { version = "0.6", features = ["fs", "limit", "set-header"] }
+rusqlite = { version = "0.37", features = ["bundled"] }
+serde.workspace = true
+argon2 = "0.5"
+rand_core = { version = "0.6", features = ["getrandom"] }
+base64 = "0.22"
+sha2 = "0.10"
+url = "2"
+rpassword = "7"
+[dev-dependencies]
+tower = { version = "0.5", features = ["util"] }

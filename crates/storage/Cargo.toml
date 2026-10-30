@@ -1,0 +1,14 @@
+[package]
+name = "notepad-storage"
+version = "0.1.0"
+edition = "2024"
+[dependencies]
+notepad-core.workspace = true
+serde_json.workspace = true
+serde.workspace = true
+rusqlite = { version = "0.37", features = ["bundled"] }
+
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+[dev-dependencies]
+axum = "0.8"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "net"] }
