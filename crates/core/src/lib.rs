@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 pub mod canvas;
 mod email;
 pub mod markdown;
+pub mod shapes;
 pub mod sync;
 pub use email::{Email, MAX_EMAIL_BYTES, import_email};
 
@@ -12,7 +13,7 @@ pub struct AuthState {
     pub authenticated: bool,
 }
 
-pub const SCHEMA: u32 = 2;
+pub const SCHEMA: u32 = 3;
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Workspace {
     pub schema: u32,
@@ -28,6 +29,16 @@ pub struct Note {
     pub strokes: Vec<Vec<Point>>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub connections: Vec<canvas::Connection>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub shapes: Vec<shapes::Shape>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ink: Vec<InkStroke>,
+}
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct InkStroke {
+    pub id: String,
+    pub points: Vec<Point>,
+    pub style: shapes::Style,
 }
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Card {
@@ -59,7 +70,7 @@ pub fn safe_link(s: &str) -> bool {
 impl Workspace {
     /// Upgrade stored data and backups. Network writes must already use SCHEMA.
     pub fn upgrade(mut self) -> Result<Self, &'static str> {
-        if self.schema == 1 {
+        if self.schema == 1 || self.schema == 2 {
             self.schema = SCHEMA;
         }
         self.validate()?;
@@ -82,6 +93,8 @@ impl Workspace {
                 || n.cards.len() > 1000
                 || n.strokes.len() > 10000
                 || n.connections.len() > canvas::MAX_CONNECTIONS
+                || n.shapes.len() > 5000
+                || n.ink.len() > 10000
             {
                 return Err("Note is too large");
             }
@@ -92,8 +105,8 @@ impl Workspace {
                 }
                 if !c.x.is_finite()
                     || !c.y.is_finite()
-                    || !(0.0..=2200.0).contains(&c.x)
-                    || !(0.0..=1400.0).contains(&c.y)
+                    || c.x.abs() > 100000.
+                    || c.y.abs() > 100000.
                 {
                     return Err("Card is outside canvas");
                 }
@@ -123,6 +136,31 @@ impl Workspace {
                     _ => return Err("Unsupported card content"),
                 }
             }
+            let mut vector_ids = std::collections::HashSet::new();
+            for shape in &n.shapes {
+                shape.validate()?;
+                if !vector_ids.insert(shape.id.as_str()) {
+                    return Err("Duplicate shape identifier");
+                }
+            }
+            for stroke in &n.ink {
+                if !valid_identifier(&stroke.id)
+                    || !vector_ids.insert(stroke.id.as_str())
+                    || stroke.points.is_empty()
+                    || stroke.points.len() > 50000
+                {
+                    return Err("Invalid ink stroke");
+                }
+                stroke.style.validate()?;
+                if stroke.points.iter().any(|p| {
+                    !p.x.is_finite()
+                        || !p.y.is_finite()
+                        || p.x.abs() > 100000.
+                        || p.y.abs() > 100000.
+                }) {
+                    return Err("Invalid ink point");
+                }
+            }
             let mut connections = std::collections::HashSet::new();
             for c in &n.connections {
                 if !valid_identifier(&c.id)
@@ -139,8 +177,8 @@ impl Workspace {
                     || s.iter().any(|p| {
                         !p.x.is_finite()
                             || !p.y.is_finite()
-                            || !(0.0..=2600.0).contains(&p.x)
-                            || !(0.0..=1800.0).contains(&p.y)
+                            || p.x.abs() > 100000.
+                            || p.y.abs() > 100000.
                     })
             }) {
                 return Err("Invalid drawing");
@@ -158,7 +196,7 @@ impl Default for Workspace {
                 Card { size: None, email: None, id: "idea".into(), kind: "text".into(), x: 120., y: 100., text: "Room for the unfinished\n\nA place for ideas before they know what they want to be.\n\nTry moving this note by its top edge.".into() },
                 Card { size: None, email: None, id: "sticky".into(), kind: "sticky".into(), x: 500., y: 180., text: "What if writing and thinking could happen in the same place?".into() },
                 Card { size: None, email: None, id: "reference".into(), kind: "link".into(), x: 160., y: 440., text: "https://excalidraw.com".into() },
-            ], connections:vec![], strokes: vec![],
+            ], shapes:vec![], ink:vec![], connections:vec![], strokes: vec![],
         }] }
     }
 }
@@ -220,5 +258,18 @@ mod tests {
         w.schema = SCHEMA;
         w.notes[0].cards[0].x = f64::NAN;
         assert!(w.validate().is_err());
+    }
+}
+
+#[cfg(test)]
+mod drawing_roundtrip_tests {
+    #[test]
+    fn geometry_roundtrips_without_sync_drift() {
+        let value = 375.20000000000005_f64;
+        let json = serde_json::to_string(&value).unwrap();
+        assert_eq!(
+            serde_json::from_str::<f64>(&json).unwrap().to_bits(),
+            value.to_bits()
+        );
     }
 }

@@ -10,11 +10,11 @@ page.on('pageerror',e=>errors.push(e.message));page.on('request',r=>{if(r.url().
 const saved=()=>page.waitForFunction(()=>document.querySelector('.statusbar')?.dataset.localState==='saved');
 const disk=async()=>{await saved();return page.evaluate(()=>new Promise((resolve,reject)=>{const open=indexedDB.open('notepad-local',1);open.onerror=()=>reject(open.error);open.onsuccess=()=>{const db=open.result;const get=db.transaction('drafts').objectStore('drafts').get('workspace');get.onsuccess=()=>{db.close();resolve(JSON.parse(get.result));};};}));};
 const input=async(selector,value)=>{await page.focus(selector);await page.$eval(selector,(el,v)=>{el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));},value);};
-async function selectNote(title){for(const row of await page.$$('.note-row')){if((await row.$eval('span',e=>e.textContent))===title){await row.click();return;}}throw Error('Note row missing: '+title);}
+async function selectNote(title){if(await page.$eval('.app-shell',e=>e.classList.contains('drawing-mode')&&!e.classList.contains('menu-open')))await page.click('[aria-label="Toggle notes"]');for(const row of await page.$$('.note-row')){if((await row.$eval('span',e=>e.textContent))===title){await row.click();return;}}throw Error('Note row missing: '+title);}
 const title=()=>page.$eval('[aria-label="Note title"]',el=>el.value);
 const tab=async(name)=>{for(const button of await page.$$('.view-tabs button'))if((await button.evaluate(e=>e.textContent)).trim()===name){await button.click();return;}throw Error('Missing tab '+name);};
 try{
- await page.setViewport({width:1440,height:900});await page.goto(url,{waitUntil:'networkidle0'});await signIn(page);await saved();
+ await page.setViewport({width:1440,height:900});await page.goto(url+'/#write',{waitUntil:'networkidle0'});await signIn(page);await saved();
  await page.click('.new-note');await input('[aria-label="Note title"]','Field notes');
  const source='# Field notes\n\nA place to **think**.\n\n- [x] Draft\n\n| Idea | Status |\n| --- | --- |\n| Notebook | Growing |\n\n[[Reference|read the reference]] and [[New idea]].\n\n`[[Not a link]]`\n\n<script>window.markdownExecuted=true</script>\n\n![pixel](https://tracking.invalid/pixel)\n\n[unsafe](javascript:alert(1))';
  await input('.document',source);await saved();let w=await disk();const sourceId=w.notes.find(n=>n.title==='Field notes').id;
@@ -38,17 +38,17 @@ try{
  assert.equal(await page.$eval('.canvas-card.note h3',el=>el.textContent),'Field notes');
  await tab('Write');await input('.document',source+'\n\nCanvas follows this edit.');await saved();await tab('Canvas');
  assert.ok(await page.$eval('.note-card-preview',el=>el.textContent.includes('Canvas follows this edit.')));
- await page.click('[aria-label="Add note to canvas"]');await page.select('#linked-note',target.id);await page.click('.note-picker .primary');await saved();assert.equal(await page.$$eval('.canvas-card.note',els=>els.length),2);
+ await page.click('[aria-label="Insert into canvas"]');await (await page.$$('.drawing-insert-menu button'))[0].click();await page.select('#linked-note',target.id);await page.click('.note-picker .primary');await saved();assert.equal(await page.$$eval('.canvas-card.note',els=>els.length),2);
  await page.click('.canvas-card.note .open-note[data-note-id="'+target.id+'"]');await page.waitForSelector('.reading');assert.equal(await title(),'Renamed reference');assert.ok(await page.$('.backlinks [data-note-id="'+sourceId+'"]'));
  await selectNote('Field notes');await tab('Write');await input('.document','A😀B');await page.$eval('.document',el=>el.setSelectionRange(1,3));
  await page.click('.writing-actions button:first-child');await page.select('#linked-note',target.id);await page.click('.note-picker .primary');await saved();
  const linkedBody=(await disk()).notes.find(n=>n.id===sourceId).body;assert.ok(linkedBody.startsWith('A[Renamed reference](notepad:'));assert.ok(linkedBody.endsWith(')B'));assert.ok(!linkedBody.includes('😀'));
  const cdp=await page.createCDPSession();await cdp.send('Browser.setDownloadBehavior',{behavior:'allow',downloadPath:data,browserContextId:context.id});await page.click('.writing-actions button:last-child');
  let exported;for(let i=0;i<50;i++){try{exported=await readFile(join(data,'Field notes.md'),'utf8');break;}catch{}await new Promise(r=>setTimeout(r,100));}assert.equal(exported,linkedBody);
- await tab('Canvas');await page.evaluate(()=>{const dt=new DataTransfer();dt.items.add(new File(['# Dropped page\n\nCollected from a file.'],'dropped.md',{type:'text/markdown'}));document.querySelector('.canvas-scroll').dispatchEvent(new DragEvent('drop',{bubbles:true,dataTransfer:dt,clientX:600,clientY:400}));});
+ await tab('Canvas');await page.evaluate(()=>{const dt=new DataTransfer();dt.items.add(new File(['# Dropped page\n\nCollected from a file.'],'dropped.md',{type:'text/markdown'}));document.querySelector('#drawing-viewport').dispatchEvent(new DragEvent('drop',{bubbles:true,dataTransfer:dt,clientX:600,clientY:400}));});
  await page.waitForFunction(()=>document.querySelectorAll('.canvas-card.note').length===3);await saved();assert.equal(await title(),'Field notes');
  w=await disk();const dropped=w.notes.find(n=>n.title==='Dropped page');assert.ok(w.notes.find(n=>n.id===sourceId).cards.some(c=>c.kind==='note'&&c.text===dropped.id));
- await input('[aria-label="Find a note"]','Dropped page');assert.equal(await page.$$eval('.note-row',els=>els.length),2);await input('[aria-label="Find a note"]','');
+ await page.click('[aria-label="Toggle notes"]');await input('[aria-label="Find a note"]','Dropped page');assert.equal(await page.$$eval('.note-row',els=>els.length),2);await input('[aria-label="Find a note"]','');
  const bad=join(data,'invalid.md');await writeFile(bad,Buffer.from([255]));const count=(await disk()).notes.length;await (await page.$('[aria-label="Import Markdown"]')).uploadFile(bad);await page.waitForFunction(()=>document.querySelector('.status')?.textContent.includes('UTF-8'));assert.equal((await disk()).notes.length,count);
  await page.click('.topbar .primary');await page.waitForFunction(()=>document.querySelector('.status')?.textContent.startsWith('Synced with server'));await saved();
  await page.reload({waitUntil:'networkidle0'});await saved();assert.equal(await title(),'Field notes');assert.equal(await page.$$eval('.canvas-card.note',els=>els.length),3);

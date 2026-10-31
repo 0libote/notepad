@@ -1,6 +1,7 @@
 /* Hallmark · shape: app screen · genre: atmospheric · theme: Ribbon (deal 3/3, dawn adapted to requested blue) · nav: notebook rail · signature: a note with a writing surface and spatial canvas · states: opening, empty, error, full · axes: light/grotesk-sans/cool · v2.0.0 */
 /* Hallmark · pre-emit critique: density kept quiet; weakest: canvas on mobile, horizontal scrolling preserves room to work. */
 /* Hallmark · answered F25 · the canvas is a spatial editing surface; touch scrolling exposes off-screen objects. */
+/* Hallmark · waive 7b · white drawing surface requested to match Excalidraw · white paper keeps user drawing colors neutral */
 @import url('/styles/tokens.css');
 @import url('/styles/base.css');
 :root {
@@ -14,6 +15,10 @@
   --color-field-border: #7b8798; --color-grid: #dce1e9; --color-clear: transparent; --color-error: #a13c39;
   --shadow-float: 0 4px 20px #2631420c, 0 1px 3px #26314208;
   --shadow-note: 0 3px 8px #26314208, 0 12px 26px #26314204;
+  --font-display: 'Instrument Sans', system-ui, sans-serif; --font-body: 'Figtree', system-ui, sans-serif;
+}
+[data-theme="drawing"] {
+  --color-surface: #ffffff; --color-focus: #4f4bb8; --color-accent-soft: #e6e5ff; --color-grid: #e2e4ea;
   --font-display: 'Instrument Sans', system-ui, sans-serif; --font-body: 'Figtree', system-ui, sans-serif;
 }
 * { box-sizing: border-box; }
@@ -256,3 +261,103 @@ h2 { text-wrap: balance; }
 }
 .card-handle { user-select: none; }
 .ink .stroke-hit { stroke-linecap: round; stroke-linejoin: round; }
+
+/* Drawing editor: white surface, violet selection, quiet chrome. */
+.app-shell.drawing-mode { grid-template-columns: minmax(0, 1fr); }
+.drawing-mode .mobile-menu { display: inline-flex; }
+.drawing-mode .topbar { min-height: 48px; height: 48px; padding: 0 var(--space-md); gap: var(--space-xs); }
+.drawing-mode .note-header { padding: var(--space-xs) var(--space-md); gap: var(--space-xs); min-height: 44px; }
+.drawing-mode .note-identity input { font-size: 16px; letter-spacing: 0; }
+.drawing-mode .auth-panel { position: relative; z-index: 40; }
+.drawing-mode .locked-workspace { position: relative; z-index: 40; }
+.canvas-wrap.drawing-surface { background: var(--color-canvas); border-top: 1px solid var(--color-rule); overflow: clip; }
+.drawing-surface .canvas-intro { display: none; }
+.drawing-surface .empty-canvas { display: none; }
+.drawing-toolbar { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 20; display: flex; align-items: center; gap: var(--space-3xs); background: var(--color-surface); border: 1px solid var(--color-rule); border-radius: 10px; box-shadow: var(--shadow-drawing-float); padding: var(--space-2xs); max-width: calc(100% - 24px); overflow-x: auto; scrollbar-width: thin; }
+.drawing-toolbar button { position: relative; min-width: 38px; height: 38px; padding: var(--space-xs); border-radius: 8px; color: var(--color-ink-2); flex-shrink: 0; }
+.drawing-toolbar button:hover { background: var(--color-paper-2); }
+.drawing-toolbar button.chosen { background: var(--color-select-soft); color: var(--color-select-strong); }
+.drawing-toolbar .tool-key { font-size: 10px; line-height: 1; color: var(--color-muted); margin-left: var(--space-3xs); }
+.drawing-toolbar button.chosen .tool-key { color: var(--color-select-strong); }
+.drawing-toolbar button:focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.drawing-inserts { position: absolute; top: 12px; left: 12px; z-index: 21; }
+.drawing-inserts > button { background: var(--color-surface); border: 1px solid var(--color-rule); border-radius: 8px; box-shadow: var(--shadow-drawing-float); font-size: 13px; padding: var(--space-xs) var(--space-sm); min-height: 38px; }
+.drawing-insert-menu { position: absolute; top: 44px; left: 0; min-width: 208px; display: flex; flex-direction: column; gap: var(--space-3xs); background: var(--color-surface); border: 1px solid var(--color-rule); border-radius: 10px; box-shadow: var(--shadow-drawing-panel); padding: var(--space-xs); z-index: 22; }
+.drawing-insert-menu button { justify-content: flex-start; width: 100%; font-size: 13px; padding: var(--space-xs) var(--space-sm); min-height: 36px; border-radius: 6px; color: var(--color-ink-2); }
+.drawing-insert-menu button:hover { background: var(--color-paper-2); }
+.drawing-properties { position: absolute; left: 16px; top: 82px; width: 202px; z-index: 15; display: flex; flex-direction: column; gap: var(--space-sm); background: var(--color-surface); border: 1px solid var(--color-rule); border-radius: 10px; box-shadow: var(--shadow-drawing-float); padding: var(--space-sm); max-height: calc(100% - 170px); overflow-y: auto; }
+.drawing-properties.collapsed { display: none; }
+.property-section { display: flex; flex-direction: column; gap: var(--space-xs); }
+.property-section h3 { font-family: var(--font-body); font-size: 12px; font-weight: 500; letter-spacing: 0; color: var(--color-muted); margin: 0; }
+.property-section label { font-size: 12px; color: var(--color-muted); display: flex; align-items: center; justify-content: space-between; gap: var(--space-xs); }
+.color-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.color-options button.swatch { width: 24px; height: 24px; min-height: 0; padding: 0; border-radius: 6px; border: 1px solid var(--color-rule); flex-shrink: 0; }
+.color-options button.swatch[aria-pressed="true"] { outline: 2px solid var(--color-select); outline-offset: 2px; }
+.drawing-properties input[type="color"] { width: 100%; height: 28px; min-height: 28px; padding: 0; border: 1px solid var(--color-rule); border-radius: 6px; background: var(--color-clear); }
+.property-options { display: flex; flex-wrap: wrap; gap: var(--space-2xs); }
+.property-options button { font-size: 12px; min-height: 30px; padding: var(--space-2xs) var(--space-xs); border: 1px solid var(--color-rule); border-radius: 6px; color: var(--color-ink-2); }
+.property-options button[aria-pressed="true"] { background: var(--color-select-soft); border-color: var(--color-select); color: var(--color-select-strong); }
+.drawing-properties input[type="range"] { width: 100%; accent-color: var(--color-select); }
+.properties-toggle { position: absolute; left: 12px; top: 62px; z-index: 16; background: var(--color-surface); border: 1px solid var(--color-rule); border-radius: 8px; box-shadow: var(--shadow-drawing-float); font-size: 12px; min-height: 32px; padding: var(--space-2xs) var(--space-xs); color: var(--color-muted); }
+.drawing-viewport { position: relative; flex: 1; min-height: 0; overflow: clip; touch-action: none; background: var(--color-canvas); background-image: radial-gradient(var(--color-grid-drawing) 0.8px, var(--color-clear) 0.8px); background-size: 22px 22px; }
+.drawing-viewport.hand-mode { cursor: grab; }
+.drawing-viewport.hand-mode:active { cursor: grabbing; }
+.drawing-viewport.pen-mode { cursor: crosshair; }
+.drawing-world { position: absolute; inset: 0; transform-origin: 0 0; }
+.drawing-layer { overflow: visible; position: absolute; inset: 0; }
+.vector-shape.selected { outline: none; }
+.vector-shape .shape-hit { fill: none; stroke: var(--color-clear); stroke-width: 16px; pointer-events: stroke; }
+.vector-shape.selected .shape-outline { stroke: var(--color-select); }
+.shape-handle { width: 10px; height: 10px; fill: var(--color-surface); stroke: var(--color-select); stroke-width: 1.5px; }
+.drawing-text-editor { position: absolute; z-index: 12; min-width: 120px; }
+.drawing-text-editor textarea { width: 100%; min-height: 32px; padding: var(--space-2xs) var(--space-xs); background: var(--color-clear); border: 1px dashed var(--color-select); border-radius: 4px; font-size: 15px; line-height: 1.5; resize: none; overflow: clip; }
+.drawing-footer { position: absolute; bottom: 12px; left: 16px; right: 16px; display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); pointer-events: none; z-index: 10; }
+.drawing-navigation { pointer-events: auto; display: flex; align-items: center; gap: var(--space-3xs); background: var(--color-surface); border: 1px solid var(--color-rule); border-radius: 8px; box-shadow: var(--shadow-drawing-float); padding: var(--space-2xs); }
+.drawing-navigation button { font-size: 12px; min-width: 32px; min-height: 32px; padding: var(--space-2xs); color: var(--color-ink-2); }
+.drawing-help { pointer-events: auto; font-size: 12px; color: var(--color-muted); background: var(--color-surface); border: 1px solid var(--color-rule); border-radius: 8px; padding: var(--space-2xs) var(--space-xs); }
+.drawing-selection-actions { display: flex; align-items: center; gap: var(--space-3xs); background: var(--color-surface); border: 1px solid var(--color-rule); border-radius: 8px; box-shadow: var(--shadow-drawing-float); padding: var(--space-2xs); pointer-events: auto; font-size: 12px; }
+.drawing-selection-actions button { min-height: 30px; padding-inline: var(--space-xs); font-size: 12px; }
+.drawing-empty-hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 36ch; text-align: center; font-size: 13px; color: var(--color-muted); pointer-events: none; }
+.drawing-surface .canvas-card { border-radius: 6px; box-shadow: var(--shadow-drawing-float); }
+.drawing-surface .canvas-card.selected { outline: 1px solid var(--color-select); }
+.drawing-surface :focus-visible { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+@media (min-width: 961px) {
+  .drawing-mode .sidebar { display: none; }
+  .drawing-mode.menu-open .sidebar { display: flex; position: fixed; left: 16px; top: 60px; bottom: 16px; width: 240px; z-index: 30; background: var(--color-paper-2); border: 1px solid var(--color-rule); border-radius: 10px; box-shadow: var(--shadow-drawing-panel); }
+}
+@media (max-width: 960px) {
+  .drawing-mode.menu-open .sidebar { z-index: 30; }
+}
+@media (max-width: 800px) {
+  .drawing-surface .drawing-properties { display: none; }
+  .drawing-surface.properties-open .drawing-properties { display: flex; }
+  .drawing-toolbar { left: 12px; right: 12px; transform: none; max-width: none; }
+  .drawing-inserts { top: 62px; }
+  .properties-toggle { left: auto; right: 12px; top: 62px; }
+  .drawing-properties { top: 108px; }
+  .drawing-footer { left: 12px; right: 12px; }
+  .drawing-help { display: none; }
+}
+@font-face { font-family: "Excalifont"; src: url("/fonts/Excalifont-Regular-a88b72a24fb54c9f94e3b5fdaa7481c9.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; unicode-range: U+20-7e,U+a0-a3,U+a5-a6,U+a8-ab,U+ad-b1,U+b4,U+b6-b8,U+ba-ff,U+131,U+152-153,U+2bc,U+2c6,U+2da,U+2dc,U+304,U+308,U+2013-2014,U+2018-201a,U+201c-201e,U+2020,U+2022,U+2024-2026,U+2030,U+2039-203a,U+20ac,U+2122,U+2212; }
+@font-face { font-family: "Excalifont"; src: url("/fonts/Excalifont-Regular-be310b9bcd4f1a43f571c46df7809174.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; unicode-range: U+100-130,U+132-137,U+139-149,U+14c-151,U+154-17e,U+192,U+1fc-1ff,U+218-21b,U+237,U+1e80-1e85,U+1ef2-1ef3,U+2113; }
+@font-face { font-family: "Excalifont"; src: url("/fonts/Excalifont-Regular-b9dcf9d2e50a1eaf42fc664b50a3fd0d.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; unicode-range: U+400-45f,U+490-491,U+2116; }
+@font-face { font-family: "Excalifont"; src: url("/fonts/Excalifont-Regular-41b173a47b57366892116a575a43e2b6.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; unicode-range: U+37e,U+384-38a,U+38c,U+38e-393,U+395-3a1,U+3a3-3a8,U+3aa-3cf,U+3d7; }
+@font-face { font-family: "Excalifont"; src: url("/fonts/Excalifont-Regular-3f2c5db56cc93c5a6873b1361d730c16.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; unicode-range: U+2c7,U+2d8-2d9,U+2db,U+2dd,U+302,U+306-307,U+30a-30c,U+326-328,U+212e,U+2211,U+fb01-fb02; }
+@font-face { font-family: "Excalifont"; src: url("/fonts/Excalifont-Regular-349fac6ca4700ffec595a7150a0d1e1d.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; unicode-range: U+462-463,U+472-475,U+4d8-4d9,U+4e2-4e3,U+4e6-4e9,U+4ee-4ef; }
+@font-face { font-family: "Excalifont"; src: url("/fonts/Excalifont-Regular-623ccf21b21ef6b3a0d87738f77eb071.woff2") format("woff2"); font-weight: 400; font-style: normal; font-display: swap; unicode-range: U+300-301,U+303; }
+[data-theme="drawing"] { --font-drawing: "Excalifont", "Figtree", sans-serif; }
+.drawing-toolbar .tool-key { position: absolute; right: 3px; bottom: 3px; margin: 0; font-size: 8px; }
+.drawing-text-editor { padding: 0; border: 1px dashed var(--color-select); border-radius: 0; outline-offset: 4px; }
+.drawing-viewport { background-image: none; }
+.drawing-viewport.eraser-mode { cursor: crosshair; }
+.drawing-viewport.pen-mode .shape-hit, .drawing-viewport.hand-mode .shape-hit { pointer-events: none; }
+.properties-toggle { display: none; }
+@media (max-width: 800px) { .properties-toggle { display: inline-flex; } .drawing-selection-actions { display: none; } }
+
+.drawing-surface.properties-open .drawing-properties { display: none; }
+.drawing-surface .properties-toggle { display: flex; left: 110px; top: 12px; right: auto; }
+@media (max-width: 800px) {
+ .drawing-surface .drawing-properties { display: none; }
+ .drawing-surface.properties-open .drawing-properties { display: flex; }
+ .drawing-surface .properties-toggle { left: auto; right: 12px; top: 62px; }
+}

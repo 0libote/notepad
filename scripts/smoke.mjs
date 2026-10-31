@@ -25,10 +25,10 @@ try {
  assert.ok(await page.evaluate(()=>[...document.fonts].some(f=>f.family==='Figtree' && f.status==='loaded')),'Bundled fonts must load');
  await page.screenshot({path:'/tmp/notepad-desktop.png'});
  assert.equal(await page.$$eval('.canvas-card',els=>els.length),3);
- await page.click('[aria-label="Add text card"]');await page.waitForFunction(()=>document.querySelectorAll('.canvas-card').length===4);
+ await page.click('[aria-label="Insert into canvas"]');await page.waitForSelector('.drawing-insert-menu');await page.click('.drawing-insert-menu [aria-label="Add text card"]');await page.waitForFunction(()=>document.querySelectorAll('.canvas-card').length===4);
  const before=(await read()).notes[0].cards[0];
  const handle=await page.$('.canvas-card .card-handle');const box=await handle.boundingBox();
- await page.mouse.move(box.x+60,box.y+15);await page.mouse.down();await page.mouse.move(box.x+140,box.y+65,{steps:5});await page.mouse.up();
+ await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2+80,box.y+box.height/2+50,{steps:5});await page.mouse.up();
  const after=(await read()).notes[0].cards[0];assert.equal(after.x,before.x+80);assert.equal(after.y,before.y+50);
  await page.click('[aria-label="Undo"]');assert.equal((await read()).notes[0].cards[0].x,before.x);
  await (await page.$('.canvas-card .card-handle')).focus();await page.keyboard.press('ArrowRight');
@@ -36,21 +36,21 @@ try {
  await page.click('[aria-label="Undo"]');
  await page.click('[aria-label="Draw"]');const world=await page.$('#world');const wb=await world.boundingBox();
  await page.mouse.move(wb.x+830,wb.y+140);await page.mouse.down();await page.mouse.move(wb.x+900,wb.y+200,{steps:5});await page.mouse.up();
- assert.ok((await read()).notes[0].strokes[0].length>1);
+ assert.ok(((await read()).notes[0].ink||[])[0].points.length>1);
  await page.click('[aria-label="Select and move"]');
- await page.evaluate(()=>{const dt=new DataTransfer();dt.setData('text/plain','https://www.rust-lang.org');document.querySelector('.canvas-scroll').dispatchEvent(new DragEvent('drop',{bubbles:true,dataTransfer:dt,clientX:800,clientY:500}));});
+ await page.evaluate(()=>{const dt=new DataTransfer();dt.setData('text/plain','https://www.rust-lang.org');document.querySelector('#drawing-viewport').dispatchEvent(new DragEvent('drop',{bubbles:true,dataTransfer:dt,clientX:800,clientY:500}));});
  assert.ok((await read()).notes[0].cards.some(c=>c.text==='https://www.rust-lang.org'));
  await page.evaluate(()=>{
   const raw=atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=');
   const bytes=Uint8Array.from(raw,c=>c.charCodeAt(0));const dt=new DataTransfer();dt.items.add(new File([bytes],'pixel.png',{type:'image/png'}));
-  document.querySelector('.canvas-scroll').dispatchEvent(new DragEvent('drop',{bubbles:true,dataTransfer:dt,clientX:700,clientY:420}));
+  document.querySelector('#drawing-viewport').dispatchEvent(new DragEvent('drop',{bubbles:true,dataTransfer:dt,clientX:700,clientY:420}));
  });
  await page.waitForFunction(()=>document.querySelector('.attachment')?.complete);
  assert.ok((await read()).notes[0].cards.some(c=>c.kind==='image' && c.text.startsWith('data:image/png;base64,')));
  const originalEmail='From: =?UTF-8?B?Sm9zw6k=?= <jose@example.com>\r\nTo: Notes <notes@example.com>\r\nSubject: =?UTF-8?Q?Caf=C3=A9_notes?=\r\nDate: Thu, 29 Oct 2026 10:00:00 +0000\r\nContent-Type: text/html; charset=utf-8\r\n\r\n<p>Bring the sketchbook.</p><script>window.emailExecuted=true</script><img src="https://tracking.invalid/pixel">';
  await page.evaluate(raw=>{
   const dt=new DataTransfer();dt.items.add(new File([raw],'meeting.eml',{type:'message/rfc822'}));
-  document.querySelector('.canvas-scroll').dispatchEvent(new DragEvent('drop',{bubbles:true,dataTransfer:dt,clientX:440,clientY:260}));
+  document.querySelector('#drawing-viewport').dispatchEvent(new DragEvent('drop',{bubbles:true,dataTransfer:dt,clientX:440,clientY:260}));
  },originalEmail);
  await page.waitForSelector('.email-content');
  const emailCard=(await read()).notes[0].cards.find(c=>c.kind==='email');
@@ -67,6 +67,7 @@ try {
  // Invalid imports leave the current workspace unchanged.
  const countBefore=(await read()).notes[0].cards.length;
  const badPath=join(data,'invalid.eml');await writeFile(badPath,'not an email');
+ await page.click('[aria-label="Insert into canvas"]');await page.waitForSelector('.drawing-insert-menu');
  await (await page.$('[aria-label="Add email"]')).uploadFile(badPath);
  await page.waitForFunction(()=>document.querySelector('.status').textContent.includes('email headers'));
  assert.equal((await read()).notes[0].cards.length,countBefore);
@@ -86,8 +87,9 @@ try {
   // DataTransfer clones File objects, so delay at the prototype until the queued read begins.
   const original=File.prototype.arrayBuffer;
   File.prototype.arrayBuffer=function(){const current=this;return new Promise(resolve=>{window.finishEmailRead=()=>{File.prototype.arrayBuffer=original;original.call(current).then(resolve);};});};
-  document.querySelector('.canvas-scroll').dispatchEvent(new DragEvent('drop',{bubbles:true,dataTransfer:dt,clientX:440,clientY:260}));
+  document.querySelector('#drawing-viewport').dispatchEvent(new DragEvent('drop',{bubbles:true,dataTransfer:dt,clientX:440,clientY:260}));
  });
+ await page.click('[aria-label="Toggle notes"]');await page.waitForSelector('.menu-open .new-note');
  await page.click('.new-note');
  await page.evaluate(()=>window.finishEmailRead());
  await page.waitForFunction(()=>document.querySelector('.statusbar')?.dataset.localState==='saved');

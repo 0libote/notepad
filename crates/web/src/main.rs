@@ -19,13 +19,24 @@ fn point(e: &PointerEvent, zoom: f64) -> Point {
         .unwrap()
         .get_bounding_client_rect();
     Point {
-        x: ((e.client_x() as f64 - rect.x()) / zoom).clamp(0., 2600.),
-        y: ((e.client_y() as f64 - rect.y()) / zoom).clamp(0., 1800.),
+        x: ((e.client_x() as f64 - rect.x()) / zoom).clamp(-100000., 100000.),
+        y: ((e.client_y() as f64 - rect.y()) / zoom).clamp(-100000., 100000.),
     }
 }
 #[component]
 fn Icon(#[prop(into)] name: String) -> impl IntoView {
     let path = match name.as_str() {
+        "rectangle" => "M4 4h16v16H4z",
+        "diamond" => "m12 3 9 9-9 9-9-9z",
+        "ellipse" => "M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0",
+        "arrow" => "M4 20 20 4M9 4h11v11",
+        "line" => "M4 20 20 4",
+        "hand" => {
+            "M8 13V6a2 2 0 0 1 4 0v6-8a2 2 0 0 1 4 0v8-5a2 2 0 0 1 4 0v9c0 5-4 7-8 7-3 0-5-3-7-6l-2-4c-1-3 2-4 4-1l1 1"
+        }
+        "eraser" => "m3 14 10-11 8 8-10 10H8zM8 9l8 8",
+        "redo" => "m16 4 5 5-5 5M21 9H11a7 7 0 0 0 0 14",
+        "lock" => "M5 10h14v11H5zM8 10V6a4 4 0 0 1 8 0v4",
         "plus" => "M12 5v14M5 12h14",
         "search" => "m21 21-5-5M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0",
         "note" => "M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h5",
@@ -58,6 +69,7 @@ struct Editor {
     active: RwSignal<usize>,
     status: RwSignal<String>,
     history: RwSignal<Vec<Workspace>>,
+    future: RwSignal<Vec<Workspace>>,
     ready: RwSignal<bool>,
     local_status: RwSignal<String>,
     local_generation: RwSignal<u64>,
@@ -88,6 +100,8 @@ impl Editor {
                 cards: vec![],
                 strokes: vec![],
                 connections: vec![],
+                shapes: vec![],
+                ink: vec![],
             });
         });
         self.active.set(index);
@@ -126,6 +140,8 @@ impl Editor {
             return;
         }
         if let Some(mut w) = self.history.try_update(|h| h.pop()).flatten() {
+            self.future
+                .update(|h| h.push(self.workspace.get_untracked()));
             w.revision = self.workspace.with_untracked(|current| current.revision);
             self.active.update(|i| *i = (*i).min(w.notes.len() - 1));
             self.workspace.set(w);
@@ -133,7 +149,22 @@ impl Editor {
             self.persist();
         }
     }
+    fn redo(self) {
+        if !self.ready.get_untracked() {
+            return;
+        }
+        if let Some(mut w) = self.future.try_update(|h| h.pop()).flatten() {
+            self.history
+                .update(|h| h.push(self.workspace.get_untracked()));
+            w.revision = self.workspace.with_untracked(|w| w.revision);
+            self.active.update(|i| *i = (*i).min(w.notes.len() - 1));
+            self.workspace.set(w);
+            self.workspace_epoch.update(|v| *v += 1);
+            self.persist();
+        }
+    }
     fn snapshot(self) {
+        self.future.set(vec![]);
         self.history.update(|h| {
             h.push(self.workspace.get_untracked());
             if h.len() > 40 {
@@ -193,8 +224,8 @@ impl Editor {
                 text,
                 email: None,
                 size: None,
-                x: x.clamp(0., 2200.),
-                y: y.clamp(0., 1400.),
+                x: x.clamp(-100000., 100000.),
+                y: y.clamp(-100000., 100000.),
             },
         );
     }
@@ -253,8 +284,8 @@ fn read_email(file: web_sys::File, editor: Editor, x: f64, y: f64) {
                             text: body,
                             email: Some(email),
                             size: None,
-                            x: x.clamp(0., 2200.),
-                            y: y.clamp(0., 1400.),
+                            x: x.clamp(-100000., 100000.),
+                            y: y.clamp(-100000., 100000.),
                         },
                     ),
                     Err(error) => editor.status.set(error.into()),
@@ -304,6 +335,8 @@ fn read_markdown_drop(file: web_sys::File, editor: Editor, x: f64, y: f64) {
                         cards: vec![],
                         strokes: vec![],
                         connections: vec![],
+                        shapes: vec![],
+                        ink: vec![],
                     });
                     if let Some(note) = w.notes.iter_mut().find(|n| n.id == destination) {
                         note.cards.push(Card {
@@ -312,8 +345,8 @@ fn read_markdown_drop(file: web_sys::File, editor: Editor, x: f64, y: f64) {
                             text: id,
                             email: None,
                             size: None,
-                            x: x.clamp(0., 2200.),
-                            y: y.clamp(0., 1400.),
+                            x: x.clamp(-100000., 100000.),
+                            y: y.clamp(-100000., 100000.),
                         });
                     }
                 });
@@ -372,8 +405,8 @@ fn read_image(file: web_sys::File, editor: Editor, x: f64, y: f64) {
                         text,
                         email: None,
                         size: None,
-                        x: x.clamp(0., 2200.),
-                        y: y.clamp(0., 1400.),
+                        x: x.clamp(-100000., 100000.),
+                        y: y.clamp(-100000., 100000.),
                     },
                 );
             }
@@ -434,6 +467,7 @@ fn App() -> impl IntoView {
         active: RwSignal::new(0),
         status: RwSignal::new("Opening workspace…".into()),
         history: RwSignal::new(vec![]),
+        future: RwSignal::new(vec![]),
         ready: RwSignal::new(false),
         local_status: RwSignal::new("Opening local draft…".into()),
         local_generation: RwSignal::new(0),
@@ -621,6 +655,7 @@ fn App() -> impl IntoView {
                     e.workspace.set(w);
                     e.workspace_epoch.update(|v| *v += 1);
                     e.history.set(vec![]);
+                    e.future.set(vec![]);
                     e.ready.set(true);
                     e.persist();
                 }
@@ -817,6 +852,7 @@ fn App() -> impl IntoView {
                             Ok(()) => {
                                 e.active.set(0);
                                 e.history.set(vec![]);
+                                e.future.set(vec![]);
                                 e.sync_base.set(None);
                                 sync.status.set(String::new());
                                 sync.conflicts.set(0);
@@ -868,6 +904,7 @@ fn App() -> impl IntoView {
                     Ok(()) => {
                         e.active.set(0);
                         e.history.set(vec![]);
+                        e.future.set(vec![]);
                         e.sync_base.set(None);
                         sync.status.set(String::new());
                         sync.conflicts.set(0);
@@ -896,7 +933,7 @@ fn App() -> impl IntoView {
         }
     };
     view! {
-        <div class="app-shell" on:click=note_click class:menu-open=move || menu.get()>
+        <div class="app-shell" class:drawing-mode=move ||mode.get()=="canvas" data-theme=move ||if mode.get()=="canvas"{"drawing"}else{"notes"} on:click=note_click class:menu-open=move || menu.get()>
             <aside class="sidebar" aria-label="Workspace">
                 <a class="brand" href="#canvas"><span class="brand-mark"><Icon name="note"/></span>"notepad"<span class="personal">"Personal"</span></a>
                 <div class="workspace-name"><span class="avatar">"O"</span><div><strong>"My workspace"</strong><small>"A little room to think"</small></div></div>

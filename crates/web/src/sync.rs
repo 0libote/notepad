@@ -101,6 +101,7 @@ impl Sync {
             e.active
                 .set(w.notes.iter().position(|n| n.id == active).unwrap_or(0));
             e.history.set(vec![]);
+            e.future.set(vec![]);
             e.workspace.set(w);
             e.workspace_epoch.update(|v| *v += 1);
         } else {

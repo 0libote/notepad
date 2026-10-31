@@ -1,21 +1,22 @@
 {
-  "scanned": "2026-10-30",
+  "scanned": "2026-10-31",
   "findings": {
-    "source": "DESIGN.md:1 locks the existing notebook system",
-    "fonts": "crates/web/styles/tokens.css:67 and app.css:17: Instrument Sans and Figtree; bundled locally",
-    "palette": "crates/web/styles/app.css:6: chalk, ink, slate and muted blue tokens",
-    "motion": "No decorative motion; app responds to user gestures",
+    "source": "DESIGN.md:1 locks drawing-first canvas with white surface and violet selection; Read/Write unchanged",
+    "fonts": "crates/web/styles/tokens.css and app.css [data-theme=drawing]: Instrument Sans and Figtree; bundled locally",
+    "palette": "crates/web/styles/app.css: chalk, ink, slate and muted blue tokens; drawing adds violet #6965db, lavender #e6e5ff, focus #4f4bb8 via root and drawing theme tokens",
+    "motion": "No decorative motion; drawing panels use transform and opacity only; global reduced-motion rule retained",
     "framework": "crates/web/Cargo.toml: Leptos CSR/Rust WASM"
   },
   "preserve": [
     "Notepad name",
-    "Existing page/canvas shell",
+    "Existing Read/Write page styling and measure",
     "Fonts and role-based colour tokens",
-    "Keyboard focus and reduced motion"
+    "Keyboard focus and reduced motion",
+    "Captured card content styling with smaller drawing chrome"
   ],
   "introduce": [
-    "Selected-card resize handle and dimensions",
-    "Anchored card connections",
-    "Selection controls for cards, drawings and connections"
+    "Drawing-first canvas: white surface, centered floating toolbar, left 202px properties panel",
+    "Violet and lavender selection, 10px square handles, quiet footer navigation",
+    "Insert menu for note, image, and email captures; rail hidden by default in drawing-mode with floating overlay"
   ]
 }

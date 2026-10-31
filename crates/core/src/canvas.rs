@@ -18,8 +18,10 @@ impl Size {
             && self.height.is_finite()
             && (MIN_WIDTH..=1000.).contains(&self.width)
             && (MIN_HEIGHT..=1200.).contains(&self.height)
-            && x + self.width <= WIDTH
-            && y + self.height <= HEIGHT
+            && x.is_finite()
+            && y.is_finite()
+            && x.abs() <= 100000.
+            && y.abs() <= 100000.
     }
 }
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -40,17 +42,17 @@ impl Card {
             return;
         }
         self.size = Some(Size {
-            width: width.clamp(MIN_WIDTH, (WIDTH - self.x).min(1000.)),
-            height: height.clamp(MIN_HEIGHT, (HEIGHT - self.y).min(1200.)),
+            width: width.clamp(MIN_WIDTH, 1000.),
+            height: height.clamp(MIN_HEIGHT, 1200.),
         });
     }
     pub fn move_to(&mut self, x: f64, y: f64, measured: Size) {
         if !x.is_finite() || !y.is_finite() {
             return;
         }
-        let size = self.size.unwrap_or(measured);
-        self.x = x.clamp(0., (WIDTH - size.width).clamp(0., 2200.));
-        self.y = y.clamp(0., (HEIGHT - size.height).clamp(0., 1400.));
+        let _ = measured;
+        self.x = x.clamp(-100000., 100000.);
+        self.y = y.clamp(-100000., 100000.);
     }
 }
 impl Note {
@@ -148,7 +150,7 @@ mod tests {
             width: 1000.,
             height: 300.,
         });
-        w.notes[0].cards[0].x = 2200.;
+        w.notes[0].cards[0].x = 100001.;
         assert!(w.validate().is_err());
     }
     #[test]
@@ -173,7 +175,7 @@ mod tests {
         w.validate().unwrap();
     }
     #[test]
-    fn resizing_and_movement_keep_the_whole_card_inside_the_world() {
+    fn resizing_and_movement_support_an_open_board() {
         let mut c = Workspace::default().notes.remove(0).cards.remove(0);
         c.x = 2200.;
         c.y = 1400.;
@@ -181,15 +183,15 @@ mod tests {
         assert_eq!(
             c.size,
             Some(Size {
-                width: 400.,
-                height: 400.
+                width: 1000.,
+                height: 1200.
             })
         );
         c.move_to(-10., -10., c.size.unwrap());
-        assert_eq!((c.x, c.y), (0., 0.));
+        assert_eq!((c.x, c.y), (-10., -10.));
         c.resize(900., 1000.);
         c.move_to(2500., 1700., c.size.unwrap());
-        assert_eq!((c.x, c.y), (1700., 800.));
+        assert_eq!((c.x, c.y), (2500., 1700.));
         assert!(c.size.unwrap().valid_at(c.x, c.y));
         c.resize(-1., -1.);
         assert_eq!(

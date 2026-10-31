@@ -505,6 +505,8 @@ mod reference_tests {
             cards: vec![],
             strokes: vec![],
             connections: vec![],
+            shapes: vec![],
+            ink: vec![],
         });
         w.notes.push(Note {
             id: "canvas".into(),
@@ -521,6 +523,8 @@ mod reference_tests {
             }],
             strokes: vec![],
             connections: vec![],
+            shapes: vec![],
+            ink: vec![],
         });
         let mut code = w.notes[1].clone();
         code.id = "code".into();

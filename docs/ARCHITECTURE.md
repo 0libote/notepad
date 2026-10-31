@@ -4,7 +4,7 @@ Notepad is a personal notebook with a spatial working surface. Keep the first pr
 
 ## Current implementation
 
-- `notepad-core`: versioned, serializable Rust workspace model and input validation. Notes own Markdown text, movable/resizable cards, anchored card connections, and vector strokes. Email cards add optional metadata and a base64-encoded original message; format-1 notebooks, drafts and backups upgrade to format 2 while preserving their content. Network writes require the current format so older clients cannot drop new fields.
+- `notepad-core`: versioned, serializable Rust workspace model and input validation. Notes own Markdown text, movable/resizable cards, anchored card connections, styled vector shapes, text, ink, and legacy strokes. Email cards add optional metadata and a base64-encoded original message; format-1 notebooks, drafts and backups upgrade to format 3 while preserving their content. Network writes require the current format so older clients cannot drop new fields.
 - `notepad-web`: Leptos client-side rendering compiled to WebAssembly. Browser APIs are called through Rust's `web-sys`; no handwritten JavaScript application. HTML/CSS and generated WASM loader JavaScript are still necessary for the web. Bun only runs development commands.
 - `notepad-storage`: native SQLite drafts scoped to a server identity, plus a Rust HTTP client. The portable backend is tested without a GUI.
 - `notepad-desktop`: Tauri shell, packaged web assets and narrowly scoped IPC commands; native build/launch remains unverified.
