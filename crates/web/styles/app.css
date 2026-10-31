@@ -1,7 +1,6 @@
 /* Hallmark · shape: app screen · genre: atmospheric · theme: Ribbon (deal 3/3, dawn adapted to requested blue) · nav: notebook rail · signature: a note with a writing surface and spatial canvas · states: opening, empty, error, full · axes: light/grotesk-sans/cool · v2.0.0 */
 /* Hallmark · pre-emit critique: density kept quiet; weakest: canvas on mobile, horizontal scrolling preserves room to work. */
 /* Hallmark · answered F25 · the canvas is a spatial editing surface; touch scrolling exposes off-screen objects. */
-/* Hallmark · waive 7b · white drawing surface requested to match Excalidraw · white paper keeps user drawing colors neutral */
 @import url('/styles/tokens.css');
 @import url('/styles/base.css');
 :root {
@@ -18,7 +17,7 @@
   --font-display: 'Instrument Sans', system-ui, sans-serif; --font-body: 'Figtree', system-ui, sans-serif;
 }
 [data-theme="drawing"] {
-  --color-surface: #ffffff; --color-focus: #4f4bb8; --color-accent-soft: #e6e5ff; --color-grid: #e2e4ea;
+  --color-surface: #fefefe; --color-accent: #4f4bb8; --color-focus: #4f4bb8; --color-accent-soft: #e6e5ff; --color-grid: #e2e4ea;
   --font-display: 'Instrument Sans', system-ui, sans-serif; --font-body: 'Figtree', system-ui, sans-serif;
 }
 * { box-sizing: border-box; }
